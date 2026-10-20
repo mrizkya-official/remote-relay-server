@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Control PC Pribadi</title>
+    <!-- Tailwind CSS untuk styling modern -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Socket.IO Client CDN -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-slate-800 rounded-2xl shadow-xl p-6 border border-slate-700">
+        <h1 class="text-2xl font-bold text-center mb-6 text-indigo-400">📱 Mobile Controller</h1>
+
+        <!-- Status Koneksi -->
+        <div class="mb-4 p-3 rounded-lg bg-slate-900 text-sm flex items-center justify-between">
+            <span class="text-slate-400">Status Server:</span>
+            <span id="connection-status" class="font-semibold text-yellow-500">Menghubungkan...</span>
+        </div>
+
+        <!-- Target Device ID -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-slate-300 mb-2">Target Device ID PC:</label>
+            <input type="text" id="target-id" value="PC-DESKTOP-8UB6RIE" 
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <!-- Tombol Kontrol Daya -->
+        <div class="grid grid-cols-2 gap-4 mt-6">
+            <button onclick="sendCommand('shutdown')" 
+                class="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-xl transition duration-200 shadow-lg flex items-center justify-center space-x-2">
+                <span>⏻ Matikan PC</span>
+            </button>
+            
+            <button onclick="sendCommand('restart')" 
+                class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-4 rounded-xl transition duration-200 shadow-lg flex items-center justify-center space-x-2">
+                <span>🔄 Restart PC</span>
+            </button>
+        </div>
+
+        <!-- Log Aktivitas -->
+        <div class="mt-6">
+            <p class="text-xs font-semibold text-slate-400 mb-2">LOG AKTIVITAS:</p>
+            <div id="log-box" class="bg-slate-900 rounded-lg p-3 h-32 overflow-y-auto text-xs font-mono text-green-400 border border-slate-700">
+                [SYSTEM] Menyiapkan panel kontrol...<br>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sesuaikan URL ini jika server sudah di-deploy ke cloud (Render/Railway)
+        // Untuk uji coba lokal dalam 1 Wi-Fi, gunakan IP komputer Anda (misal: http://192.168.1.x:3000) atau http://localhost:3000 jika via PC
+        const SERVER_URL = "https://remote-relay-server-production.up.railway.app"; 
+        
+        const socket = io(SERVER_URL);
+        const statusEl = document.getElementById('connection-status');
+        const logBox = document.getElementById('log-box');
+
+        function addLog(message) {
+            logBox.innerHTML += `> ${message}<br>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        socket.on('connect', () => {
+            statusEl.textContent = "Terhubung";
+            statusEl.className = "font-semibold text-green-400";
+            addLog("Terhubung ke Relay Server.");
+        });
+
+        socket.on('disconnect', () => {
+            statusEl.textContent = "Terputus";
+            statusEl.className = "font-semibold text-red-400";
+            addLog("Terputus dari Relay Server.");
+        });
+
+        function sendCommand(cmd) {
+            const targetId = document.getElementById('target-id').value.trim();
+            if (!targetId) {
+                alert("Masukkan Device ID target terlebih dahulu!");
+                return;
+            }
+
+            if (confirm(`Apakah Anda yakin ingin mengirim perintah '${cmd}' ke perangkat ${targetId}?`)) {
+                socket.emit('send_command', {
+                    targetDeviceId: targetId,
+                    command: cmd
+                });
+                addLog(`Mengirim perintah: [${cmd}] ke ${targetId}`);
+            }
+        }
+    </script>
+</body>
+</html>
